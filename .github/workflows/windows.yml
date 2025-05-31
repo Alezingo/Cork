@@ -1,25 +1,29 @@
 name: Build Cork Windows
-
-on: workflow_dispatch   # lo lancerai a mano
-
+on: workflow_dispatch
 jobs:
   build:
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up MSVC + Ninja
+      - name: Set up MSVC environment
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Install vcpkg dependencies
-        uses: lukka/run-vcpkg@v11
-        with:
-          setupOnly: true          # usa il manifest del repo
+      - name: Set up vcpkg
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+          C:\vcpkg\bootstrap-vcpkg.bat
+          C:\vcpkg\vcpkg integrate install
+
+      - name: Install libraries with vcpkg
+        run: |
+          C:\vcpkg\vcpkg install boost:x64-windows mpir:x64-windows tbb:x64-windows eigen3:x64-windows
 
       - name: Configure (ClangCL)
         run: |
           cmake -S . -B build ^
                 -G "Visual Studio 17 2022" -T ClangCL -A x64 ^
+                -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake ^
                 -DCORK_USE_SYSTEM_EIGEN=ON -DBUILD_TESTING=OFF
 
       - name: Build
