@@ -6,7 +6,8 @@ jobs:
   build:
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up MSVC environment
         uses: ilammy/msvc-dev-cmd@v1
@@ -26,9 +27,9 @@ jobs:
           cmake -S . -B build `
                 -G "Visual Studio 17 2022" -T ClangCL -A x64 `
                 -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake `
-                -DCORK_USE_SYSTEM_EIGEN=ON -DBUILD_TESTING=OFF
+                -DCORK_USE_SYSTEM_EIGEN=ON -DBUILD_TESTING=OFF -DCORK_BUILD_UNITTEST=OFF
 
-      - name: Build
+      - name: Build Cork
         run: cmake --build build --config Release --parallel
 
       - name: Upload Cork.exe
