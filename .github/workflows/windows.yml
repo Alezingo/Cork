@@ -31,7 +31,7 @@ jobs:
                 -DCORK_WITH_TESTING=OFF -DBUILD_TESTING=OFF `
                 -DCORK_BUILD_UNITTEST=OFF -DCORK_BUILD_REGRESSION=OFF
 
-      #   niente --target: compila l'intera soluzione
+      # niente --target: compila l'intera soluzione
       - name: Build Cork
         run: cmake --build build --config Release --parallel
 
