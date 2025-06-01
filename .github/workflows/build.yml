@@ -24,26 +24,26 @@ jobs:
         .\bootstrap-vcpkg.bat
         .\vcpkg install mpir:x64-windows
         
-    - name: Find Solution Files
+    - name: Find Cork Solution Files (exclude vcpkg)
       run: |
-        echo "Looking for .sln files:"
-        Get-ChildItem -Recurse -Filter "*.sln"
-        echo "Looking for .vcxproj files:"
-        Get-ChildItem -Recurse -Filter "*.vcxproj"
+        echo "Looking for .sln files (excluding vcpkg):"
+        Get-ChildItem -Recurse -Filter "*.sln" | Where-Object { $_.FullName -notlike "*vcpkg*" }
+        echo "Looking for .vcxproj files (excluding vcpkg):"
+        Get-ChildItem -Recurse -Filter "*.vcxproj" | Where-Object { $_.FullName -notlike "*vcpkg*" }
         
-    - name: Build with MSBuild (if .sln exists)
+    - name: Build Cork with MSBuild
       run: |
-        $slnFiles = Get-ChildItem -Recurse -Filter "*.sln"
+        $slnFiles = Get-ChildItem -Recurse -Filter "*.sln" | Where-Object { $_.FullName -notlike "*vcpkg*" }
         if ($slnFiles) {
           $sln = $slnFiles[0].FullName
-          echo "Building: $sln"
-          msbuild $sln /p:Configuration=Release /p:Platform=x64 /p:VcpkgRoot="vcpkg"
+          echo "Building Cork solution: $sln"
+          msbuild $sln /p:Configuration=Release /p:Platform=x64
         } else {
-          echo "No .sln file found, trying individual .vcxproj files"
-          $projFiles = Get-ChildItem -Recurse -Filter "*.vcxproj"
+          echo "No Cork .sln file found, trying individual .vcxproj files"
+          $projFiles = Get-ChildItem -Recurse -Filter "*.vcxproj" | Where-Object { $_.FullName -notlike "*vcpkg*" }
           foreach ($proj in $projFiles) {
-            echo "Building: $($proj.FullName)"
-            msbuild $proj.FullName /p:Configuration=Release /p:Platform=x64 /p:VcpkgRoot="vcpkg"
+            echo "Building Cork project: $($proj.FullName)"
+            msbuild $proj.FullName /p:Configuration=Release /p:Platform=x64
           }
         }
         
