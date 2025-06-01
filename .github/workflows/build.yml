@@ -2,7 +2,7 @@ name: Build Cork
 
 on:
   push:
-    branches: [ v0.9.0 ]
+    branches: [ master ]
   workflow_dispatch: # Permette di eseguire manualmente
 
 jobs:
@@ -12,7 +12,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        ref: v0.9.0
+        ref: master
     
     - name: Setup MSVC
       uses: microsoft/setup-msbuild@v1
@@ -45,7 +45,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        ref: v0.9.0
+        ref: master
         
     - name: Install dependencies
       run: |
