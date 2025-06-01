@@ -20,16 +20,18 @@ jobs:
     - name: Install CMake
       run: choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
       
-    - name: Install MPIR
+    - name: Install MPIR with vcpkg
       run: |
-        Invoke-WebRequest -Uri "https://github.com/wbhart/mpir/releases/download/mpir-3.0.0/mpir-3.0.0-x64-windows-binaries.zip" -OutFile "mpir.zip"
-        Expand-Archive -Path "mpir.zip" -DestinationPath "C:\mpir"
+        git clone https://github.com/Microsoft/vcpkg.git
+        cd vcpkg
+        .\bootstrap-vcpkg.bat
+        .\vcpkg install mpir:x64-windows
         
-    - name: Configure CMake with MPIR
+    - name: Configure CMake with vcpkg
       run: |
         mkdir build
         cd build
-        cmake .. -G "Visual Studio 17 2022" -A x64 -DMPIR_ROOT="C:\mpir" -DCMAKE_PREFIX_PATH="C:\mpir"
+        cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_TOOLCHAIN_FILE="vcpkg/scripts/buildsystems/vcpkg.cmake"
         
     - name: Build Cork
       run: |
