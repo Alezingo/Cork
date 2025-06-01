@@ -1,51 +1,58 @@
+# File: .github/workflows/windows.yml
+
 name: Build Cork Windows
 
-# Il workflow parte solo quando premi “Run workflow” nella tab Actions
+# Trigger manuale (puoi eseguire cliccando "Run workflow" nella tab Actions)
 on: workflow_dispatch
 
 jobs:
-  build:
+  build-windows:
+    # Usiamo la macchina virtuale Windows 2022 di GitHub Actions
     runs-on: windows-2022
 
     steps:
-      ############################################################
-      # 1) Controlla di aver effettivamente clonato il repo principale
-      ############################################################
-      - name: Checkout source
+      ############################################
+      # 1) Checkout del codice (del tuo fork Alezingo/Cork)
+      ############################################
+      - name: “Checkout source”
         uses: actions/checkout@v4
 
-      ############################################################
-      # 2) Imposta l’ambiente (MSVC + ClangCL)
-      ############################################################
-      - name: Set up MSVC env
+      ############################################
+      # 2) Setup MSVC + Clang-CL
+      ############################################
+      # Questa action prepara automaticamente
+      # le variabili d’ambiente affinché “cl.exe” e “clang-cl.exe” 
+      # siano disponibili nel PATH
+      - name: “Set up MSVC + Clang-CL”
         uses: ilammy/msvc-dev-cmd@v1
-        # Questo step assicura che “cl.exe” e “clang-cl.exe” siano nel PATH
 
-      ############################################################
-      # 3) Installa vcpkg e le librerie necessarie
-      ############################################################
-      - name: Set up vcpkg + dependencies
+      ############################################
+      # 3) Clona vcpkg, bootstrap e installa dipendenze
+      ############################################
+      - name: “Install vcpkg dependencies”
         run: |
-          # Se C:/vcpkg esiste già, lo eliminiamo per partire puliti
+          # 3.1  Rimuovo eventuale cartella precedente per partire da zero
           if (Test-Path C:/vcpkg) {
             Remove-Item -Recurse -Force C:/vcpkg
           }
 
-          # Cloniamo vcpkg e lanciamo il bootstrapper
+          # 3.2  Clono vcpkg nella path C:/vcpkg
           git clone https://github.com/microsoft/vcpkg.git C:/vcpkg
-          # L’opzione -disableMetrics è facoltativa
+
+          # 3.3  Lancio il bootstrapper di vcpkg (genererà vcpkg.exe)
           C:/vcpkg/bootstrap-vcpkg.bat -disableMetrics
 
-          # Integra vcpkg nell’ambiente (facoltativo, ma consigliato)
+          # 3.4  Integro vcpkg nell’ambiente (facoltativo ma consigliato)
           C:/vcpkg/vcpkg integrate install
 
-          # Installiamo le dipendenze di Cork in una sola riga:
+          # 3.5  Installo le librerie richieste da Cork:
+          #      boost, mpir, tbb, eigen3 per architettura x64-windows
           C:/vcpkg/vcpkg install boost:x64-windows mpir:x64-windows tbb:x64-windows eigen3:x64-windows
 
-      ############################################################
-      # 4) Configura la build CMake (nessun test, nessun warning→error)
-      ############################################################
-      - name: Configure (Clang-CL, no tests)
+      ############################################
+      # 4) Configura CMake con Clang-CL (senza test)
+      ############################################
+      - name: “Configure (Clang-CL, no tests)”
         run: |
           cmake -S . -B build `
                 -G "Visual Studio 17 2022" -T ClangCL -A x64 `
@@ -55,33 +62,27 @@ jobs:
                 -DCORK_WITH_TESTING=OFF -DBUILD_TESTING=OFF `
                 -DCORK_BUILD_UNITTEST=OFF -DCORK_BUILD_REGRESSION=OFF
 
-          # A questo punto, se “CMake Generate done” appare nel log senza errori,
-          # significa che CMake ha trovato CMakeLists.txt e ha creato la folder “build/”.
+          # Di solito, a questo punto vedrai nel log:
+          #   “– Configuring done”
+          #   “– Generating done”
+          # E nella cartella “build/” saranno comparsi i file .sln/.vcxproj.
 
-      ############################################################
-      # 5) Compila la soluzione in modalità Release
-      ############################################################
-      - name: Build (Release)
+      ############################################
+      # 5) Compila la soluzione in modalità Release x64
+      ############################################
+      - name: “Build (Release)”
         run: cmake --build build --config Release --parallel
-        # Durante questa fase, nel log devono comparire le righe:
-        #   “Cork.vcxproj -> C:\...\build\Release\Cork.exe”
-        #   seguite da “Build succeeded.”
-        #
-        # Se invece vedi un errore o non compare “Cork.vcxproj”, allora:
-        #   • il progetto non è stato generato correttamente da CMake
-        #   • oppure Cork non produce “Cork.exe” (magari si chiama in altro modo).
+        # Se tutto va bene, nel log troverai:
+        #   “Cork.vcxproj -> C:\…\build\Release\Cork.exe”
+        #   “Build succeeded.”
 
-      ############################################################
-      # 6) Carica TUTTI i file dentro build/Release nell’artefatto
-      ############################################################
-      - name: Upload build/Release contents
+      ############################################
+      # 6) Carica come artifact tutto ciò che è in build/Release/**
+      ############################################
+      - name: “Upload Cork executable”
         uses: actions/upload-artifact@v4
         with:
           name: cork-exe
           path: build/Release/**
-          # Il doppio asterisco (**) include ogni file e sottocartella
-          # che CMake ha generato dentro build/Release/.
-          #
-          # In questo modo, qualunque .exe (Cork.exe, CorkDemo.exe, ecc.)
-          # e qualunque DLL generata finiranno nell’ZIP, e potrai estrarli
-          # sul tuo PC senza rischi di file mancanti.
+          # Il doppio asterisco include qualsiasi file o sottocartella prodotto da CMake
+          # dentro build/Release (es. Cork.exe, CorkDemo.exe, tutte le DLL, ecc.)
