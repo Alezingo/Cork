@@ -1,4 +1,4 @@
-name: Build Cork Windows
+name: Build Cork Windows (MSBuild)
 
 on:
   push:
@@ -14,38 +14,51 @@ jobs:
       with:
         ref: master
         
-    - name: Setup Visual Studio
+    - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
       
-    - name: Install CMake
-      run: choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
-      
-    - name: Install MPIR with vcpkg
+    - name: Install vcpkg and MPIR
       run: |
         git clone https://github.com/Microsoft/vcpkg.git
         cd vcpkg
         .\bootstrap-vcpkg.bat
         .\vcpkg install mpir:x64-windows
         
-    - name: Configure CMake with vcpkg
+    - name: Find Solution Files
       run: |
-        mkdir build
-        cd build
-        cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_TOOLCHAIN_FILE="vcpkg/scripts/buildsystems/vcpkg.cmake"
+        echo "Looking for .sln files:"
+        Get-ChildItem -Recurse -Filter "*.sln"
+        echo "Looking for .vcxproj files:"
+        Get-ChildItem -Recurse -Filter "*.vcxproj"
         
-    - name: Build Cork
+    - name: Build with MSBuild (if .sln exists)
       run: |
-        cd build
-        cmake --build . --config Release --verbose
+        $slnFiles = Get-ChildItem -Recurse -Filter "*.sln"
+        if ($slnFiles) {
+          $sln = $slnFiles[0].FullName
+          echo "Building: $sln"
+          msbuild $sln /p:Configuration=Release /p:Platform=x64 /p:VcpkgRoot="vcpkg"
+        } else {
+          echo "No .sln file found, trying individual .vcxproj files"
+          $projFiles = Get-ChildItem -Recurse -Filter "*.vcxproj"
+          foreach ($proj in $projFiles) {
+            echo "Building: $($proj.FullName)"
+            msbuild $proj.FullName /p:Configuration=Release /p:Platform=x64 /p:VcpkgRoot="vcpkg"
+          }
+        }
         
-    - name: List build output
+    - name: List build outputs
       run: |
-        Get-ChildItem -Recurse build/
+        echo "Looking for .exe files:"
+        Get-ChildItem -Recurse -Filter "*.exe"
+        echo "Looking for .dll files:"
+        Get-ChildItem -Recurse -Filter "*.dll"
         
-    - name: Upload Cork.exe
+    - name: Upload Cork executable
       uses: actions/upload-artifact@v4
       with:
         name: Cork-Windows-x64
         path: |
-          build/**/*.exe
-          build/**/*.dll
+          **/*.exe
+          **/*.dll
+      continue-on-error: true
