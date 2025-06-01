@@ -1,28 +1,28 @@
 name: Build Cork Windows
 
-# Il workflow parte solo quando premi “Run workflow” nella tab Actions
 on: workflow_dispatch
 
 jobs:
   build:
-    runs-on: windows-2022        # runner con VS 2022 già installato
+    runs-on: windows-2022
+
     steps:
-      ##################################################################
+      ############################################################
       # 1) Clona il repository
-      ##################################################################
+      ############################################################
       - name: Checkout source
         uses: actions/checkout@v4
 
-      ##################################################################
+      ############################################################
       # 2) Imposta l’ambiente MSVC (+ Clang-CL)
-      ##################################################################
+      ############################################################
       - name: Set up MSVC env
-        uses: ilammy/msvc-dev-cmd@v1     # abilita anche clang-cl sul runner
+        uses: ilammy/msvc-dev-cmd@v1
 
-      ##################################################################
+      ############################################################
       # 3) Installa vcpkg e le librerie necessarie
-      ##################################################################
-      - name: Set up vcpkg
+      ############################################################
+      - name: Set up vcpkg + dependencies
         run: |
           git clone https://github.com/microsoft/vcpkg.git C:/vcpkg
           C:/vcpkg/bootstrap-vcpkg.bat -disableMetrics
@@ -30,28 +30,28 @@ jobs:
           C:/vcpkg/vcpkg install ^
               boost:x64-windows mpir:x64-windows tbb:x64-windows eigen3:x64-windows
 
-      ##################################################################
-      # 4) Configura la build (NO test, NO warning→error)
-      ##################################################################
-      - name: Configure (Clang-CL, no tests)
+      ############################################################
+      # 4) Configura la build (disattiva test e warning=error)
+      ############################################################
+      - name: Configure (Clang-CL, no test, no warning→error)
         run: |
           cmake -S . -B build `
                 -G "Visual Studio 17 2022" -T ClangCL -A x64 `
                 -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake `
-                -DCMAKE_CXX_FLAGS="-Wno-error" `
+                -DCMAKE_CXX_FLAGS="-Wno-error -Wno-macro-redefined" `
                 -DCORK_USE_SYSTEM_EIGEN=ON `
                 -DCORK_WITH_TESTING=OFF -DBUILD_TESTING=OFF `
                 -DCORK_BUILD_UNITTEST=OFF -DCORK_BUILD_REGRESSION=OFF
 
-      ##################################################################
-      # 5) Compila TUTTO in modalità Release (Cork.exe sarà generato)
-      ##################################################################
+      ############################################################
+      # 5) Compila la soluzione in modalità Release
+      ############################################################
       - name: Build (Release)
         run: cmake --build build --config Release --parallel
 
-      ##################################################################
-      # 6) Pubblica Cork.exe come artefatto
-      ##################################################################
+      ############################################################
+      # 6) Pubblica Cork.exe come artefatto scaricabile
+      ############################################################
       - name: Upload Cork.exe
         uses: actions/upload-artifact@v4
         with:
