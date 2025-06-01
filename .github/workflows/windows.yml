@@ -1,5 +1,6 @@
 name: Build Cork Windows
 
+# Il workflow parte solo quando premi “Run workflow” nella tab Actions
 on: workflow_dispatch
 
 jobs:
@@ -8,16 +9,17 @@ jobs:
 
     steps:
       ############################################################
-      # 1) Clona il repository
+      # 1) Controlla di aver effettivamente clonato il repo principale
       ############################################################
       - name: Checkout source
         uses: actions/checkout@v4
 
       ############################################################
-      # 2) Imposta l’ambiente MSVC (+ Clang-CL)
+      # 2) Imposta l’ambiente (MSVC + ClangCL)
       ############################################################
       - name: Set up MSVC env
         uses: ilammy/msvc-dev-cmd@v1
+        # Questo step assicura che “cl.exe” e “clang-cl.exe” siano nel PATH
 
       ############################################################
       # 3) Installa vcpkg e le librerie necessarie
@@ -29,16 +31,19 @@ jobs:
             Remove-Item -Recurse -Force C:/vcpkg
           }
 
-          # Cloniamo vcpkg e bootstrap:
+          # Cloniamo vcpkg e lanciamo il bootstrapper
           git clone https://github.com/microsoft/vcpkg.git C:/vcpkg
+          # L’opzione -disableMetrics è facoltativa
           C:/vcpkg/bootstrap-vcpkg.bat -disableMetrics
+
+          # Integra vcpkg nell’ambiente (facoltativo, ma consigliato)
           C:/vcpkg/vcpkg integrate install
 
-          # Installiamo tutti i pacchetti su una sola riga:
+          # Installiamo le dipendenze di Cork in una sola riga:
           C:/vcpkg/vcpkg install boost:x64-windows mpir:x64-windows tbb:x64-windows eigen3:x64-windows
 
       ############################################################
-      # 4) Configura la build (disattiva test e warning→error)
+      # 4) Configura la build CMake (nessun test, nessun warning→error)
       ############################################################
       - name: Configure (Clang-CL, no tests)
         run: |
@@ -50,11 +55,21 @@ jobs:
                 -DCORK_WITH_TESTING=OFF -DBUILD_TESTING=OFF `
                 -DCORK_BUILD_UNITTEST=OFF -DCORK_BUILD_REGRESSION=OFF
 
+          # A questo punto, se “CMake Generate done” appare nel log senza errori,
+          # significa che CMake ha trovato CMakeLists.txt e ha creato la folder “build/”.
+
       ############################################################
       # 5) Compila la soluzione in modalità Release
       ############################################################
       - name: Build (Release)
         run: cmake --build build --config Release --parallel
+        # Durante questa fase, nel log devono comparire le righe:
+        #   “Cork.vcxproj -> C:\...\build\Release\Cork.exe”
+        #   seguite da “Build succeeded.”
+        #
+        # Se invece vedi un errore o non compare “Cork.vcxproj”, allora:
+        #   • il progetto non è stato generato correttamente da CMake
+        #   • oppure Cork non produce “Cork.exe” (magari si chiama in altro modo).
 
       ############################################################
       # 6) Carica TUTTI i file dentro build/Release nell’artefatto
@@ -64,3 +79,9 @@ jobs:
         with:
           name: cork-exe
           path: build/Release/**
+          # Il doppio asterisco (**) include ogni file e sottocartella
+          # che CMake ha generato dentro build/Release/.
+          #
+          # In questo modo, qualunque .exe (Cork.exe, CorkDemo.exe, ecc.)
+          # e qualunque DLL generata finiranno nell’ZIP, e potrai estrarli
+          # sul tuo PC senza rischi di file mancanti.
