@@ -38,7 +38,7 @@ jobs:
           C:/vcpkg/vcpkg install boost:x64-windows mpir:x64-windows tbb:x64-windows eigen3:x64-windows
 
       ############################################################
-      # 4) Configura la build (disattiva test / warning=error)
+      # 4) Configura la build (disattiva test e warning→error)
       ############################################################
       - name: Configure (Clang-CL, no tests)
         run: |
@@ -51,16 +51,16 @@ jobs:
                 -DCORK_BUILD_UNITTEST=OFF -DCORK_BUILD_REGRESSION=OFF
 
       ############################################################
-      # 5) Compila TUTTO (Release)
+      # 5) Compila la soluzione in modalità Release
       ############################################################
       - name: Build (Release)
         run: cmake --build build --config Release --parallel
 
       ############################################################
-      # 6) Pubblica Cork.exe come artefatto
+      # 6) Carica TUTTI i file dentro build/Release nell’artefatto
       ############################################################
-      - name: Upload Cork.exe
+      - name: Upload build/Release contents
         uses: actions/upload-artifact@v4
         with:
           name: cork-exe
-          path: build/Release/Cork.exe
+          path: build/Release/**
