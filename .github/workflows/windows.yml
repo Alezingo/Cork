@@ -6,7 +6,7 @@ jobs:
   build:
     runs-on: windows-2022
     steps:
-      - name: Checkout source
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up MSVC environment
@@ -18,23 +18,22 @@ jobs:
           C:/vcpkg/bootstrap-vcpkg.bat
           C:/vcpkg/vcpkg integrate install
 
-      - name: Install dependencies
+      - name: Install libraries with vcpkg
         run: |
           C:/vcpkg/vcpkg install boost:x64-windows mpir:x64-windows tbb:x64-windows eigen3:x64-windows
 
-      - name: Configure Cork (ClangCL, no tests)
+      - name: Configure (ClangCL, no tests)
         run: |
-          cmake -S . -B build -G "Visual Studio 17 2022" -T ClangCL -A x64 `
+          cmake -S . -B build `
+                -G "Visual Studio 17 2022" -T ClangCL -A x64 `
                 -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake `
                 -DCORK_USE_SYSTEM_EIGEN=ON `
-                -DCORK_BUILD_UNITTEST=OFF `
-                -DCORK_BUILD_REGRESSION=OFF `
-                -DCORK_WITH_TESTING=OFF `
-                -DBUILD_TESTING=OFF `
-                -DCMAKE_BUILD_TYPE=Release
+                -DCORK_WITH_TESTING=OFF -DBUILD_TESTING=OFF `
+                -DCORK_BUILD_UNITTEST=OFF -DCORK_BUILD_REGRESSION=OFF
 
-      - name: Build Cork only
-        run: cmake --build build --config Release --target cork --parallel
+      #   niente --target: compila l'intera soluzione
+      - name: Build Cork
+        run: cmake --build build --config Release --parallel
 
       - name: Upload Cork.exe
         uses: actions/upload-artifact@v4
