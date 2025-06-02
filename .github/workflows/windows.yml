@@ -53,7 +53,7 @@ jobs:
       # 5) Build SOLO il target “Cork” in Release
       ############################################
       - name: Build Cork only (Release)
-        run: cmake --build build --config Release --target Cork --parallel
+        run: cmake --build build --config Release --target Corklib --parallel
 
       ############################################
       # 6) Carica Cork.exe (e eventuali DLL) come artifact
