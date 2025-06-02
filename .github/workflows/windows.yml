@@ -1,4 +1,4 @@
-# File completo: .github/workflows/windows.yml
+# .github/workflows/windows.yml
 
 name: Build Cork Windows
 
@@ -9,15 +9,12 @@ jobs:
     runs-on: windows-2022
 
     steps:
-      # 1) Checkout del codice
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # 2) Setup MSVC + Clang-CL
       - name: Set up MSVC + Clang-CL
         uses: ilammy/msvc-dev-cmd@v1
 
-      # 3) Install vcpkg e dipendenze
       - name: Install vcpkg dependencies
         run: |
           if (Test-Path C:/vcpkg) { Remove-Item -Recurse -Force C:/vcpkg }
@@ -26,23 +23,12 @@ jobs:
           C:/vcpkg/vcpkg integrate install
           C:/vcpkg/vcpkg install boost:x64-windows mpir:x64-windows tbb:x64-windows eigen3:x64-windows
 
-      # 4) Configura CMake (abilitiamo le eccezioni)
       - name: Configure (Clang-CL, enable exceptions)
-        run: |
-          cmake -S . -B build ^
-                -G "Visual Studio 17 2022" -T ClangCL -A x64 ^
-                -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake ^
-                -DCMAKE_CXX_FLAGS="/EHsc /bigobj /W3 /Zi" ^
-                -DCMAKE_C_FLAGS="/bigobj /W3 /Zi" ^
-                -DCOKR_USE_SYSTEM_EIGEN=ON ^
-                -DCOKR_WITH_TESTING=OFF -DBUILD_TESTING=OFF ^
-                -DCORK_BUILD_UNITTEST=OFF -DCORK_BUILD_REGRESSION=OFF
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -T ClangCL -A x64 -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_CXX_FLAGS="/EHsc /bigobj /W3 /Zi" -DCMAKE_C_FLAGS="/bigobj /W3 /Zi" -DCORK_USE_SYSTEM_EIGEN=ON -DCORK_WITH_TESTING=OFF -DBUILD_TESTING=OFF -DCORK_BUILD_UNITTEST=OFF -DCORK_BUILD_REGRESSION=OFF
 
-      # 5) Compila in Release
       - name: Build (Release)
         run: cmake --build build --config Release --parallel
 
-      # 6) Carica tutti i binari generati
       - name: Upload Cork executable
         uses: actions/upload-artifact@v4
         with:
